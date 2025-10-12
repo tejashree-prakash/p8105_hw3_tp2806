@@ -1,0 +1,75 @@
+---
+title: "p8105_hw3_tp2806"
+author: "Tejashree Prakash"
+date: 2025-10-12
+output: github_document
+---
+
+```{r setup, include=FALSE}
+#Load libraries and data
+library(tidyverse)
+library(dplyr)
+library(p8105.datasets)
+
+data("instacart")
+data("weather_df")
+```
+
+## Problem 1 
+
+
+```{r}
+#exploratory analysis 
+
+
+```
+
+The instacart data, 
+
+```{r}
+#distinct aisle 
+aisle_num <- instacart %>%
+  distinct(aisle_id, aisle) %>%
+  nrow()
+
+#highlight the most items ordered
+aisle_counts <- instacart %>%
+  group_by(aisle_id, aisle) %>%
+  summarise(n_count = n(), .groups = "drop") %>% 
+  arrange(desc(n_count))  
+```
+
+```{r}
+#make a plot
+instacart_count <- instacart %>%
+  group_by(aisle_id, aisle) %>%
+  summarise(aisle_count = n(), .groups = "drop") %>%
+  filter(aisle_count > 10000) #only aisle orders with aisle count above 10000 items ordered 
+
+instacart_plot <- ggplot(instacart_count, aes(x = aisle_id, y = aisle_count)) + 
+  geom_point(aes(color = aisle), alpha = 0.5) + 
+  labs(
+    title = "Number of items ordered in each aisle", 
+    x = "Aisle ID", 
+    y = "Number of items ordered", 
+    color = "Item type"
+  ) + 
+  scale_x_continuous(
+    breaks = c(0, 20, 40, 60, 80, 100, 120, 140),  
+    labels = c(0, 20, 40, 60, 80, 100, 120, 140)
+  )
+```
+
+Making a table that show popular items in three aisles. 
+```{r}
+#list frequency of three most tables in three aisles 
+pop_items <- aisle_counts %>%
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits"))
+```
+
+
+Making a table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. Make it readable. order_dow order_hour_of_day
+```{r}
+
+```
+
