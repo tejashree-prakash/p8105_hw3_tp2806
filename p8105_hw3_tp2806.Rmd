@@ -70,6 +70,28 @@ pop_items <- aisle_counts %>%
 
 Making a table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. Make it readable. order_dow order_hour_of_day
 ```{r}
+apple_ice_cream_orders <- instacart %>%
+  group_by(order_dow, order_hour_of_day, product_name) 
+
+
+
+library(tidyverse)
+
+# Create the summary table
+apple_ice_cream_orders <- instacart %>%
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>%
+  summarise(mean_hour = mean(order_hour_of_day), .groups = "drop") %>%
+  pivot_wider(
+    instacart, 
+    names_from = "order_dow",
+    values_from = "mean_hour"
+  )
+
+instacart_summary
+
+
+
 
 ```
 
