@@ -81,7 +81,7 @@ aisle_plot <- instacart %>%
 
 aisle_plot
 ```
-
+The most ordered items in each aisle were fresh vegetables and fruits, packaged vegetables and fruits, yogurt, cheese, water, and milk. These orders make sense as that is the baseline of many people's shopping list. 
 
 ## Making a table that show popular items in three aisles. 
 ```{r}
@@ -96,6 +96,8 @@ pop_items <- instacart %>%
 
 knitr::kable(pop_items)
 ```
+For baking ingredients, the most popular items were light brown sugar, pure baking soda, and cane sugar. For dog food/care, it was two different brands of dog treats/food and small dog biscuits. For packaged vegetables and fruits, organic baby spinach, raspberries, and blueberries were the most bought items. 
+
 
 ## Making a readable table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. 
 ```{r}
@@ -124,7 +126,7 @@ apple_ice_cream_orders <- instacart %>%
   ) 
 knitr::kable(apple_ice_cream_orders)
 ```
-
+The average hour-of-day that coffee ice cream and pink lady apples were bought varied each day, but they were mostly contained in the afternoon hours. 
 
 ## Problem 2
 
@@ -133,13 +135,13 @@ Downloading and cleaning the Zillow data (ZORI and zip code data), from HW2.
 ```{r}
 #Zip metadata
 zip_df <- 
-  read_csv("zillow_data/Zip Codes.csv") %>%
+  read_csv("data/zillow_data/Zip Codes.csv") %>%
   janitor::clean_names() %>%
   mutate(file_date = as.Date(file_date, format = "%m/%d/%y")) #consistent date format
 
 #Zillow data
 zori_df <- 
-  read_csv("zillow_data/zori.csv") %>%
+  read_csv("data/zillow_data/zori.csv") %>%
   janitor::clean_names() %>%
   rename(zip_code = region_name, county = county_name) %>%
   pivot_longer(
@@ -189,7 +191,7 @@ zip_10 <- zip_obs %>%
   filter(month_count < 10) %>%
   nrow()
 ```
-There are `r zip_116` zip codes that are observed 116 times. There are `r zip_10` zip codes that are observed fewer than 10 times. This suggests that there are not many zip codes that contain a limited number of rentals. This could be due to several reasons such as if there is greater property ownership rather than renting in that zip code area or the zip code doesn't contain land to be developed or hasn't been developed yet into homes (rural areas). 
+There are `r zip_116` zip codes that are observed 116 times. There are `r zip_10` zip codes that are observed fewer than 10 times. This suggests that there are not many zip codes that contain a limited number of rentals. This could be due to several reasons such as if there is greater property ownership rather than renting in that zip code area or the zip code doesn't contain land to be developed or hasn't been developed yet into homes (rural areas). Rental prices can also fluctuate throughout the year because of seasonal renting. For example, if one area is very cold in the winter months, it likely will have less renters as some people have other homes during the winter months. 
 
 
 
@@ -256,6 +258,7 @@ rent_2023 <- zillow_df %>%
     avg_rent_price = mean(rent_price, na.rm = TRUE),
     .groups = "drop"
   ) 
+knitr::kable(head(rent_2023))
 
 #Create plot showing the distribution 
 rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = borough)) +
@@ -286,7 +289,7 @@ rent_graphic <- rent_by_zip_plot + rent_2023_plot +
 print(rent_graphic)
 
 #Save graphic into results folder
-ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 300)
+ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 12, dpi = 300)
 ```
 
 ## Problem 3
@@ -294,11 +297,11 @@ ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 
 ```{r}
 #Load the two datasets
 accel_df <- 
-  read_csv("problem3_data/nhanes_accel.csv") %>%
+  read_csv("data/problem3_data/nhanes_accel.csv") %>%
   janitor::clean_names() 
 
 covar_df <- 
-  read_csv("problem3_data/nhanes_covar.csv", skip = 4) %>% #skip the first few rows that's data dictionary info 
+  read_csv("data/problem3_data/nhanes_covar.csv", skip = 4) %>% #skip the first few rows that's data dictionary info 
   janitor::clean_names()
 
 #Merge datasets - joining by seqn ID
@@ -376,7 +379,7 @@ total_activity_plot <- nhanes_total %>%
   ) + theme_minimal()
 total_activity_plot
 ```
-The total activity variable sums all of the activities noted across different data collection points into one total number. When plotted, we see that as age increases, total daily activity decreases. Additionally, the female sex group tends to have higher minutes of daily activity in the two greater education groups. In the "less than high school", there is a peak in activity at around 60 years of age, and in "high school equivalent" groups, there is a peak in activity at age 40. . 
+The total activity variable sums all of the activities noted across different data collection points into one total number. When plotted, we see that as age increases, total daily activity decreases. Additionally, the female sex group tends to have higher minutes of daily activity in the two greater education groups. In the "less than high school", there is a peak in activity at around 60 years of age, and in "high school equivalent" groups, there is a peak in activity at age 40.
 
 
 # Produce 3-panel plot with 24-hour activity. 
