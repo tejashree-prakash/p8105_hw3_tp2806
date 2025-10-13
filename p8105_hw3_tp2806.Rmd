@@ -5,6 +5,16 @@ date: 2025-10-12
 output: github_document
 ---
 
+```{r}
+#Keep the output clean with code and outputs 
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = TRUE 
+)
+```
+
+
 ```{r setup, include=FALSE}
 #Load libraries and data
 library(tidyverse)
@@ -200,7 +210,6 @@ rent_pricing <- zillow_df %>%
   ) 
 
 knitr::kable(head(rent_pricing))
-
 ```
 Across all boroughs/counties, there is an increase in average rent pricing in later years (2024) compared to earlier years (2015). Out of the boroughs, Manhattan has the largest increase in average rent price between 2015 to 2024. "NaN" refers to missing values where we don't have rent price data. 
 
@@ -228,8 +237,7 @@ rent_by_zip_plot <-
     breaks = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024),  
     labels = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024)
   )
-
-knitr::kable(rent_by_zip_plot)
+print(rent_by_zip_plot)
 ```
 This plot shows the average rent prices of each zip code within all boroughs and all years between 2015 to 2024. Overall, we can see through this plot that rent prices consistently ranged between 2000-4000 USD between 2015 to 2021. The cost of Manhattan rent is consistently higher than other boroughs throughout all years. Starting in 2022, we see a shift to more rental prices above 4000 USD, especially in Manhattan. This reflects inflation and other living costs raising after the COVID-19 pandemic. 
 
@@ -260,19 +268,18 @@ rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = 
     x = "Borough",
     y = "Average Rent Price (USD)"
   ) +
-  theme(axis.text.x = element_blank()) +
-  theme_minimal() 
+  theme(axis.text.x = element_blank()) 
 
-knitr::kable(rent_2023_plot)
+print(rent_2023_plot)
 ```
 These box plots show the distribution of average rent prices within each zip code over each month in 2023, grouped by borough. Consistently across each month in 2023, Manhattan had the highest average rent price. Visually, Brooklyn seemed consistent in the average rent price across all of the months. Staten Island had the smallest distribution, due to the smaller amount of zip codes and land area compared to the other boroughs in NYC. 
 
 
 ## Both plots put together. 
-```{r}
+```{r, fig.width=10, fig.height=12}
 #Merge both plots into one graphic
 rent_graphic <- rent_by_zip_plot + rent_2023_plot
-knitr::kable(rent_graphic)
+print(rent_graphic)
 
 #Save graphic into results folder
 ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 300)
