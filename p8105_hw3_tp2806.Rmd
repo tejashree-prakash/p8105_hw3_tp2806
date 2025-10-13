@@ -272,13 +272,19 @@ rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = 
 
 print(rent_2023_plot)
 ```
+
 These box plots show the distribution of average rent prices within each zip code over each month in 2023, grouped by borough. Consistently across each month in 2023, Manhattan had the highest average rent price. Visually, Brooklyn seemed consistent in the average rent price across all of the months. Staten Island had the smallest distribution, due to the smaller amount of zip codes and land area compared to the other boroughs in NYC. 
 
 
 ## Both plots put together. 
 ```{r, fig.width=15, fig.height=12}
 #Merge both plots into one graphic
-rent_graphic <- rent_by_zip_plot + rent_2023_plot
+rent_graphic <- rent_by_zip_plot + rent_2023_plot + 
+  plot_layout(ncol = 2) + 
+  plot_annotation(
+    title = "NYC Rental Prices by Zip Code and Borough",
+    theme = theme(plot.title = element_text(hjust = 0.25))
+  )
 print(rent_graphic)
 
 #Save graphic into results folder
