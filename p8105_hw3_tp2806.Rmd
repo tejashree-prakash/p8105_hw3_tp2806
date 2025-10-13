@@ -8,7 +8,6 @@ output: github_document
 ```{r}
 #Keep the output clean with code and outputs 
 knitr::opts_chunk$set(
-  warning = FALSE,
   message = FALSE,
   echo = TRUE 
 )
@@ -129,7 +128,7 @@ knitr::kable(apple_ice_cream_orders)
 
 ## Problem 2
 
-Downloading and cleaning the Zillow data (ZORI and zip code data).
+Downloading and cleaning the Zillow data (ZORI and zip code data), from HW2.
 
 ```{r}
 #Zip metadata
@@ -189,7 +188,6 @@ zip_116 <- zip_obs %>%
 zip_10 <- zip_obs %>%
   filter(month_count < 10) %>%
   nrow()
-
 ```
 There are `r zip_116` zip codes that are observed 116 times. There are `r zip_10` zip codes that are observed fewer than 10 times. This suggests that there are not many zip codes that contain a limited number of rentals. This could be due to several reasons such as if there is greater property ownership rather than renting in that zip code area or the zip code doesn't contain land to be developed or hasn't been developed yet into homes (rural areas). 
 
@@ -226,7 +224,7 @@ rent_by_zip_df <- zillow_df %>%
   
 rent_by_zip_plot <- 
   ggplot(rent_by_zip_df, aes(x = year, y = avg_rent_price, group = zip_code, color = borough)) +
-  geom_point(alpha = 0.75) +
+  geom_point() +
   labs(
     title = "NYC Rental Prices by ZIP Code and Borough Over Time",
     x = "Year", 
@@ -261,7 +259,7 @@ rent_2023 <- zillow_df %>%
 
 #Create plot showing the distribution 
 rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = borough)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_boxplot() +
   facet_wrap(~ month, ncol = 3) +
   labs(
     title = "Distribution of Average Rent Prices by ZIP-Code and Borough, in 2023",
@@ -298,12 +296,10 @@ ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 
 accel_df <- 
   read_csv("problem3_data/nhanes_accel.csv") %>%
   janitor::clean_names() 
-knitr::kable(head(accel_df, 5))
 
 covar_df <- 
   read_csv("problem3_data/nhanes_covar.csv", skip = 4) %>% #skip the first few rows that's data dictionary info 
   janitor::clean_names()
-knitr::kable(head(covar_df, 5))
 
 #Merge datasets - joining by seqn ID
 nhanes_df <-
@@ -320,6 +316,8 @@ nhanes_df <- nhanes_df %>%
     education = factor(education, 
                        levels = c(1, 2, 3),
                        labels = c("Less than high school", "High school equivalent", "More than high school")))
+
+knitr::kable(head(nhanes_df, 5))
 ```
 
 ## Produce a table and visualization for education category demographics. 
@@ -363,6 +361,7 @@ nhanes_total <- nhanes_df %>%
     total_activity = rowSums(across(starts_with("min")), na.rm = TRUE) #sum the total minutes with every column starting with min
   ) %>%
   select(seqn, sex, age, bmi, education, total_activity, everything())
+knitr::kable(head(nhanes_total, 5))
 
 #Plot total activity against age, with education and sex, trend line 
 total_activity_plot <- nhanes_total %>%
