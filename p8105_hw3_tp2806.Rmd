@@ -245,7 +245,7 @@ This plot shows the average rent prices of each zip code within all boroughs and
 
 ## Making visualization that shows average rental price over each month in 2023. 
 
-```{r}
+```{r, fig.width=10, fig.height=12}
 #Create table that shows average rental price over 2023
 rent_2023 <- zillow_df %>%
   mutate(
@@ -294,6 +294,130 @@ ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 
 ## Problem 3
 
 ```{r}
+#Load the two datasets
+accel_df <- 
+  read_csv("problem3_data/nhanes_accel.csv") %>%
+  janitor::clean_names() 
+knitr::kable(head(accel_df, 5))
+
+covar_df <- 
+  read_csv("problem3_data/nhanes_covar.csv", skip = 4) %>% #skip the first few rows that's data dictionary info 
+  janitor::clean_names()
+knitr::kable(head(covar_df, 5))
+
+#Merge datasets - joining by seqn ID
+nhanes_df <-
+  left_join(covar_df, accel_df, by = join_by(seqn))
+
+#Remove less than 21, if missing demographic data, recoding to not be numeric when appropriate
+nhanes_df <- nhanes_df %>%
+  drop_na() %>%
+  filter(age >= 21) %>%
+  mutate(
+    sex = factor(sex, 
+                 levels = c(1, 2),
+                 labels = c("Male", "Female")), 
+    education = factor(education, 
+                       levels = c(1, 2, 3),
+                       labels = c("Less than high school", "High school equivalent", "More than high school")))
+```
+
+## Produce a table and visualization for education category demographics. 
+```{r}
+#Table of number of men and women by education 
+sex_education_df <- nhanes_df %>%
+  count(education, sex) %>%
+  pivot_wider(
+    names_from = sex, 
+    values_from = n, 
+    values_fill = 0
+  ) %>%
+  rename(Education = education)
+
+knitr::kable(head(sex_education_df, 5))
+
+#Plot showing age by sex and education
+age_sex_education_plot <- ggplot(nhanes_df, aes(x = age, fill = sex)) +
+  geom_density(alpha = 0.4) +
+  facet_wrap(~education) + 
+  labs(
+    title = "Age Distribution by Sex and Education",
+    x = "Age (years)",
+    y = "Density",       
+    fill = "Sex"
+    ) + 
+  theme_minimal()
+age_sex_education_plot
 
 ```
+Through the education and sex table, there isn't significant variation between the number of women and men and the education level they have. The largest disparity is at the "high school equivalent", where there are more men than women that have this as their highest level of education. 
+
+The density plot demonstrates how age and sex interact within level of education received. The density peaks for both sexes in the 60+ age range for those with less than high school. For those who have more than high school education, the opposite is occurring where there is greater density among younger age groups 20-40. Overall, the female sex group tends to have more prominent peaks compared to the male sex group. 
+
+
+# Plot total activity by age, education, and sex.  
+```{r}
+#Create total activity variable 
+nhanes_total <- nhanes_df %>%
+  mutate(
+    total_activity = rowSums(across(starts_with("min")), na.rm = TRUE) #sum the total minutes with every column starting with min
+  ) %>%
+  select(seqn, sex, age, bmi, education, total_activity, everything())
+
+#Plot total activity against age, with education and sex, trend line 
+total_activity_plot <- nhanes_total %>%
+  ggplot(aes(x = age, y = total_activity, color = sex)) + 
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE) + #includes trend line
+  facet_wrap(~ education) + #puts education as level 
+  labs(
+    title = "Total Daily Activity versus Age, with Sex and Education",
+    x = "Age (years)",
+    y = "Total Activity (minutes total)"
+  ) + theme_minimal()
+total_activity_plot
+```
+The total activity variable sums all of the activities noted across different data collection points into one total number. When plotted, we see that as age increases, total daily activity decreases. Additionally, the female sex group tends to have higher minutes of daily activity in the two greater education groups. In the "less than high school", there is a peak in activity at around 60 years of age, and in "high school equivalent" groups, there is a peak in activity at age 40. . 
+
+
+# Produce 3-panel plot with 24-hour activity. 
+```{r}
+#Summarize minutes into 24 hour activity 
+total_activity_summary <- nhanes_total %>%
+  pivot_longer(
+    cols = starts_with("min"),
+    names_to = "minute",
+    names_prefix = "min",
+    values_to = "activity_count"
+  ) %>%
+  mutate(
+    minute = as.numeric(minute),
+    hour = minute / 60
+  ) %>%
+  group_by(hour, sex, education) %>%
+  summarise(
+    mean_activity = mean(activity_count, na.rm = TRUE), #calculate mean activity by hour
+    .groups = "drop"
+  )
+
+#Produce three panel plot 
+activity_24hour_plot <- ggplot(total_activity_summary, aes(x = hour, y = mean_activity, color = sex)) +
+  geom_line(size = 0.35) +
+  facet_wrap(~ education, ncol = 1) +
+  labs(
+    title = "Mean Physical Activity by Hour and Education Level",
+    x = "Hour of Day",
+    y = "Mean Activity Count",
+    color = "Sex"
+  ) +
+  theme_minimal() +  
+  scale_x_continuous(
+    breaks = c(0, 4, 8, 12, 16, 20, 24),  
+    labels = c("12AM", "4AM", "8AM", "12PM", "4PM", "8PM", "12AM")
+  )
+activity_24hour_plot
+```
+We summarized the activity data by hour to show how mean activity fluctuated throughout different points of the day, separated by sex and education level. The line plot demonstrates that physical activity peaked during the middle of the day, and stayed consistently high for a few hours until starting to decrease around 7pm. Physical activity is lowest between 12AM-7AM, which follows typical rhythms as people sleep and begin their days. 
+
+Overall, those with less than high school education have slightly higher rates of physical activity. This could be due to this group having more physically demanding occupations where they move at a greater level compared to those with higher levels of education. There seems to be a slightly greater gap between male and female activity levels in the more than high school education group. 
 
