@@ -9,6 +9,7 @@ output: github_document
 #Load libraries and data
 library(tidyverse)
 library(dplyr)
+library(patchwork)
 library(p8105.datasets)
 
 data("instacart")
@@ -89,9 +90,6 @@ pop_items <- instacart %>%
 knitr::kable(pop_items)
 ```
 
-
-
-
 Making a readable table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. 
 ```{r}
 apple_ice_cream_orders <- instacart %>%
@@ -111,5 +109,132 @@ apple_ice_cream_orders <- instacart %>%
     values_from = "mean_hour"
   ) 
 knitr::kable(apple_ice_cream_orders)
+```
+
+
+## Problem 2
+
+Downloading and cleaning the Zillow data (ZORI and zip code data).
+
+```{r}
+#Zip metadata
+zip_df <- 
+  read_csv("zillow_data/Zip Codes.csv") %>%
+  janitor::clean_names() %>%
+  mutate(file_date = as.Date(file_date, format = "%m/%d/%y")) #consistent date format
+
+#Zillow data
+zori_df <- 
+  read_csv("zillow_data/zori.csv") %>%
+  janitor::clean_names() %>%
+  rename(zip_code = region_name, county = county_name) %>%
+  pivot_longer(
+    cols = starts_with("x20"),
+    names_to = "date",
+    values_to = "rent_price"
+  ) %>%
+  mutate(
+    county = str_remove(county, " County$"),
+    date = str_remove(date, "^x"), #remove "x"
+    date = ymd(date), #consistent date format
+  ) %>%
+  rename(borough = county)
+
+#Merging datasets
+zillow_df <- left_join(zori_df, zip_df, by= c("zip_code"), relationship =
+  "many-to-many")
+
+zillow_df <- zillow_df %>%
+  select(date, zip_code, neighborhood, borough, city, state, rent_price) 
+```
+
+```{r}
+#summarize frequency of zip codes
+zip_obs <- zillow_df %>%
+  group_by(zip_code) %>%
+  summarise(month_count = n(), .groups = "drop")
+
+#how many zip codes observed 116 times
+zip_116 <- zip_obs %>%
+  filter(month_count == 116) %>%
+  nrow()
+
+#how many zip codes observed fewer than 10 times
+zip_10 <- zip_obs %>%
+  filter(month_count < 10) %>%
+  nrow()
+
+```
+
+
+Creating a table that shows the average rental price in each borough and year. 
+```{r}
+rent_pricing <- zillow_df %>%
+  mutate(year = year(date)) %>%
+  group_by(borough, year) %>%
+  summarise(
+    avg_rent_price = mean(rent_price, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+Across all boroughs/counties, there is an increase in average rent pricing in later years compared to earlier years. New York borough, which relates to Manhattan, has the largest increase in average rent price between 2015 to 2024. 
+
+
+Making a plot that shows NYC rental prices within zip codes for all available years, comparing prices across boroughs. 
+
+```{r}
+rent_comparison_plot <- 
+  ggplot(rent_pricing, aes(x = year, y = avg_rent_price, color = borough)) +
+  geom_point(alpha = 0.75) +
+  labs(
+    title = "Average Rental Price by Borough over Time",
+    x = "Year", 
+    y = "Average Rent Price (USD)", 
+    color = "Borough"
+  ) +
+  scale_x_continuous(
+    breaks = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024),  
+    labels = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024)
+  )
+```
+
+
+Making visualization that shows rental price over each month in 2023. 
+
+```{r}
+#Create table that shows average rental price over 2023
+rent_2023 <- zillow_df %>%
+  mutate(
+    year = year(date),
+    month = month(date, label = TRUE, abbr = FALSE)
+    ) %>%
+  filter(year == 2023) %>% #filter to only 2023
+  group_by(borough, zip_code, month) %>%
+  summarise(
+    avg_rent_price = mean(rent_price, na.rm = TRUE),
+    .groups = "drop"
+  ) 
+
+#Create plot showing the distribution 
+rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = borough)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  facet_wrap(~ month, ncol = 3) +
+  labs(
+    title = "Distribution of Average ZIP-Code Rent Prices by Borough, in 2023",
+    x = "Borough",
+    y = "Average Rent Price (USD)"
+  ) +
+  theme(axis.text.x = element_blank()) +
+  theme_minimal() 
+```
+
+
+Both plots put together. 
+```{r}
+#Merge both plots into one graphic
+rent_graphic <- rent_comparison_plot + rent_2023_plot
+
+#Save graphic into results folder
+ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 300)
 ```
 
