@@ -51,32 +51,30 @@ aisle_counts <- instacart %>%
 There are `r aisle_num` aisles. The top 5 aisles overall are `r paste(aisle_counts$aisle, collapse = ", ")`. 
 
 
-Making a plot that shows the number of items ordered in each aisle. 
+## Making a plot that shows the number of items ordered in each aisle. 
 ```{r}
 #make a plot
-instacart_count <- instacart %>%
-  group_by(aisle_id, aisle) %>%
-  summarise(aisle_count = n(), .groups = "drop") %>%
-  filter(aisle_count > 10000) #only aisle orders with aisle count above 10000 items ordered 
-
-instacart_plot <- ggplot(instacart_count, aes(x = aisle_id, y = aisle_count)) + 
-  geom_point(aes(color = aisle), alpha = 0.5) + 
+aisle_plot <- instacart %>%
+  count(aisle) %>%
+  filter(n > 10000) %>%
+  arrange(desc(n)) %>%
+  mutate(aisle = fct_reorder(aisle, n)) %>%
+  ggplot(aes(x = aisle, y = n)) +
+    geom_col(aes(fill = n)) +
+  scale_fill_gradient(low = "lightblue", high = "blue") + 
+  coord_flip() +
   labs(
-    title = "Number of items ordered in each aisle", 
-    x = "Aisle ID", 
-    y = "Number of items ordered", 
-    color = "Item type"
+    title = "Number of items ordered in each aisle (> 10000 items)", 
+    x = "Aisle", 
+    y = "Number of itemds ordered"
   ) + 
-  scale_x_continuous(
-    breaks = c(0, 20, 40, 60, 80, 100, 120, 140),  
-    labels = c(0, 20, 40, 60, 80, 100, 120, 140)
-  )
-instacart_plot
+  theme_minimal()
+
+aisle_plot
 ```
 
 
-
-Making a table that show popular items in three aisles. 
+## Making a table that show popular items in three aisles. 
 ```{r}
 #list frequency of three most tables in three aisles 
 pop_items <- instacart %>%
@@ -90,23 +88,30 @@ pop_items <- instacart %>%
 knitr::kable(pop_items)
 ```
 
-Making a readable table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. 
+## Making a readable table that shows the mean hour of the day at which apples and ice cream are ordered on each day of the week. 
 ```{r}
 apple_ice_cream_orders <- instacart %>%
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
   group_by(product_name, order_dow) %>%
   summarise(mean_hour = mean(order_hour_of_day), .groups = "drop") %>%
-  mutate(order_dow = recode(order_dow, 
+  mutate(
+    mean_time = format(
+      as.POSIXct(mean_hour * 3600, origin = "1970-01-01", tz = "UTC"), 
+      format = "%I:%M %p"
+    ),
+    order_dow = recode(order_dow, 
                             `0` = "Sunday", 
                             `1` = "Monday",
                             `2` = "Tuesday",
                             `3` = "Wednesday",
                             `4` = "Thursday", 
                             `5` = "Friday", 
-                            `6` = "Saturday")) %>%
+                            `6` = "Saturday")
+                  ) %>%
+  select(product_name, order_dow, mean_time) %>% #to ensure the pivot occurs without mean_hour variable
   pivot_wider( #makes it readable 
     names_from = "order_dow",
-    values_from = "mean_hour"
+    values_from = "mean_time"
   ) 
 knitr::kable(apple_ice_cream_orders)
 ```
@@ -138,14 +143,25 @@ zori_df <-
     date = str_remove(date, "^x"), #remove "x"
     date = ymd(date), #consistent date format
   ) %>%
-  rename(borough = county)
+  rename(borough = county) 
 
 #Merging datasets
 zillow_df <- left_join(zori_df, zip_df, by= c("zip_code"), relationship =
   "many-to-many")
 
 zillow_df <- zillow_df %>%
-  select(date, zip_code, neighborhood, borough, city, state, rent_price) 
+  select(date, zip_code, neighborhood, borough, city, state, rent_price) %>%
+  mutate(
+    borough = case_match(
+      borough,
+      "Bronx" ~ "Bronx",
+      "Kings" ~ "Brooklyn",
+      "New York" ~ "Manhattan",
+      "Queens" ~ "Queens",
+      "Richmond" ~ "Staten Island"
+    ))
+knitr::kable(head(zillow_df, 5))
+
 ```
 
 ```{r}
@@ -165,9 +181,11 @@ zip_10 <- zip_obs %>%
   nrow()
 
 ```
+There are `r zip_116` zip codes that are observed 116 times. There are `r zip_10` zip codes that are observed fewer than 10 times. This suggests that there are not many zip codes that contain a limited number of rentals. This could be due to several reasons such as if there is greater property ownership rather than renting in that zip code area or the zip code doesn't contain land to be developed or hasn't been developed yet into homes (rural areas). 
 
 
-Creating a table that shows the average rental price in each borough and year. 
+
+## Creating a table that shows the average rental price in each borough and year. 
 ```{r}
 rent_pricing <- zillow_df %>%
   mutate(year = year(date)) %>%
@@ -175,19 +193,33 @@ rent_pricing <- zillow_df %>%
   summarise(
     avg_rent_price = mean(rent_price, na.rm = TRUE),
     .groups = "drop"
-  )
+  ) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = avg_rent_price
+  ) 
+
+knitr::kable(head(rent_pricing))
+
 ```
-Across all boroughs/counties, there is an increase in average rent pricing in later years compared to earlier years. New York borough, which relates to Manhattan, has the largest increase in average rent price between 2015 to 2024. 
+Across all boroughs/counties, there is an increase in average rent pricing in later years (2024) compared to earlier years (2015). Out of the boroughs, Manhattan has the largest increase in average rent price between 2015 to 2024. "NaN" refers to missing values where we don't have rent price data. 
 
 
-Making a plot that shows NYC rental prices within zip codes for all available years, comparing prices across boroughs. 
+## Making a plot that shows NYC rental prices within zip codes for all available years, comparing prices across boroughs. 
 
 ```{r}
-rent_comparison_plot <- 
-  ggplot(rent_pricing, aes(x = year, y = avg_rent_price, color = borough)) +
+rent_by_zip_df <- zillow_df %>%
+  mutate(year = year(date)) %>% #get year from date
+  group_by(borough, zip_code, year) %>%
+  summarise(
+    avg_rent_price = mean(rent_price, na.rm = TRUE), .groups = "drop"
+  )
+  
+rent_by_zip_plot <- 
+  ggplot(rent_by_zip_df, aes(x = year, y = avg_rent_price, group = zip_code, color = borough)) +
   geom_point(alpha = 0.75) +
   labs(
-    title = "Average Rental Price by Borough over Time",
+    title = "NYC Rental Prices by ZIP Code and Borough Over Time",
     x = "Year", 
     y = "Average Rent Price (USD)", 
     color = "Borough"
@@ -196,16 +228,19 @@ rent_comparison_plot <-
     breaks = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024),  
     labels = c(2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024)
   )
+rent_by_zip_plot
 ```
+This plot shows the average rent prices of each zip code within all boroughs and all years between 2015 to 2024. Overall, we can see through this plot that rent prices consistently ranged between 2000-4000 USD between 2015 to 2021. The cost of Manhattan rent is consistently higher than other boroughs throughout all years. Starting in 2022, we see a shift to more rental prices above 4000 USD, especially in Manhattan. This reflects inflation and other living costs raising after the COVID-19 pandemic. 
 
 
-Making visualization that shows rental price over each month in 2023. 
+
+## Making visualization that shows average rental price over each month in 2023. 
 
 ```{r}
 #Create table that shows average rental price over 2023
 rent_2023 <- zillow_df %>%
   mutate(
-    year = year(date),
+    year = year(date), #converting year properly 
     month = month(date, label = TRUE, abbr = FALSE)
     ) %>%
   filter(year == 2023) %>% #filter to only 2023
@@ -220,21 +255,31 @@ rent_2023_plot <- ggplot(rent_2023, aes(x = borough, y = avg_rent_price, fill = 
   geom_boxplot(alpha = 0.7, outlier.shape = NA) +
   facet_wrap(~ month, ncol = 3) +
   labs(
-    title = "Distribution of Average ZIP-Code Rent Prices by Borough, in 2023",
+    title = "Distribution of Average Rent Prices by ZIP-Code and Borough, in 2023",
     x = "Borough",
     y = "Average Rent Price (USD)"
   ) +
   theme(axis.text.x = element_blank()) +
   theme_minimal() 
+
+rent_2023_plot
 ```
+These box plots show the distribution of average rent prices within each zip code over each month in 2023, grouped by borough. Consistently across each month in 2023, Manhattan had the highest average rent price. Visually, Brooklyn seemed consistent in the average rent price across all of the months. Staten Island had the smallest distribution, due to the smaller amount of zip codes and land area compared to the other boroughs in NYC. 
 
 
-Both plots put together. 
+## Both plots put together. 
 ```{r}
 #Merge both plots into one graphic
-rent_graphic <- rent_comparison_plot + rent_2023_plot
+rent_graphic <- rent_by_zip_plot + rent_2023_plot
+rent_graphic
 
 #Save graphic into results folder
 ggsave("results/rent_graphic.png", rent_graphic, width = 15, height = 10, dpi = 300)
+```
+
+## Problem 3
+
+```{r}
+
 ```
 
