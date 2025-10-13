@@ -276,7 +276,7 @@ These box plots show the distribution of average rent prices within each zip cod
 
 
 ## Both plots put together. 
-```{r, fig.width=10, fig.height=12}
+```{r, fig.width=15, fig.height=12}
 #Merge both plots into one graphic
 rent_graphic <- rent_by_zip_plot + rent_2023_plot
 print(rent_graphic)
