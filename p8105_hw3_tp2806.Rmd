@@ -134,10 +134,24 @@ Downloading and cleaning the Zillow data (ZORI and zip code data), from HW2.
 
 ```{r}
 #Zip metadata
-zip_df <- 
+zip_df = 
   read_csv("data/zillow_data/Zip Codes.csv") %>%
   janitor::clean_names() %>%
-  mutate(file_date = as.Date(file_date, format = "%m/%d/%y")) #consistent date format
+  filter(
+    !(zip_code == 10463 & county == "New York"),
+    !(zip_code == 11201 & county == "New York")
+  ) |> 
+  mutate(
+    borough = case_match(
+      county,
+      "Bronx" ~ "Bronx",
+      "Kings" ~ "Brooklyn",
+      "New York" ~ "Manhattan",
+      "Queens" ~ "Queens",
+      "Richmond" ~ "Staten Island"
+    )
+  ) |> 
+  select(zip_code, borough, neighborhood)
 
 #Zillow data
 zori_df <- 
@@ -154,15 +168,8 @@ zori_df <-
     date = str_remove(date, "^x"), #remove "x"
     date = ymd(date), #consistent date format
   ) %>%
-  rename(borough = county) 
-
-#Merging datasets
-zillow_df <- left_join(zori_df, zip_df, by= c("zip_code"), relationship =
-  "many-to-many")
-
-zillow_df <- zillow_df %>%
-  select(date, zip_code, neighborhood, borough, city, state, rent_price) %>%
-  mutate(
+  rename(borough = county) %>%
+   mutate(
     borough = case_match(
       borough,
       "Bronx" ~ "Bronx",
@@ -170,7 +177,15 @@ zillow_df <- zillow_df %>%
       "New York" ~ "Manhattan",
       "Queens" ~ "Queens",
       "Richmond" ~ "Staten Island"
-    ))
+    )) 
+
+
+#Merging datasets
+zillow_df <- left_join(zori_df, zip_df, by= c("zip_code"))
+
+zillow_df <- zillow_df %>%
+  select(date, zip_code, neighborhood, borough.x, city, state, rent_price) %>%
+  rename(borough = borough.x)
 knitr::kable(head(zillow_df, 5))
 
 ```
